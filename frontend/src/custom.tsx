@@ -1,16 +1,16 @@
 // Web customization config file
 export const config = {
   // Page title
-  pageTitle: 'Example Networks - Looking Glass',
+  pageTitle: 'OwO Network - Looking Glass',
   
   // Footer right text content
-  footerRightText: '© 2026 Example Networks, LLC.',
+  footerRightText: '© 2026 OwO Network, LLC.',
   
   // Web icon path, please put image files in public/images directory
-  faviconPath: '/images/Example.ico',
+  faviconPath: 'https://owo.network/favicon.ico',
   
   // Web top-left logo path, please put image files in public/images directory
-  logoPath: '/images/Example.svg',
+  logoPath: './assets/owo-logo.svg',
   
   // Web background color
   backgroundColor: '#f5f5f5ff'

@@ -180,6 +180,44 @@ chmod +x "/tmp/yals_agent"
 mv "/tmp/yals_agent" "$AGENT_BIN"
 rm -f "/tmp/yals_agent.zip"
 
+# Install tcping
+install_tcping() {
+  echo -e "${YELLOW}[INFO]${NC} Installing tcping..."
+  local arch=$(detect_arch)
+  local tcping_url=""
+  
+  if [[ "$arch" == "amd64" ]]; then
+    tcping_url="https://github.com/pouriyajamshidi/tcping/releases/download/v2.7.1/tcping-linux-amd64-dynamic.tar.gz"
+  elif [[ "$arch" == "arm64" ]]; then
+    tcping_url="https://github.com/pouriyajamshidi/tcping/releases/download/v2.7.1/tcping-linux-arm64-dynamic.tar.gz"
+  else
+    echo -e "${RED}[WARN]${NC} Unsupported architecture for tcping: $arch, skipping..."
+    return
+  fi
+  
+  curl -L -o "/tmp/tcping.tar.gz" "$tcping_url"
+  tar -xzf "/tmp/tcping.tar.gz" -C "/tmp/"
+  mv "/tmp/tcping" "/usr/local/bin/tcping"
+  chmod +x "/usr/local/bin/tcping"
+  rm -f "/tmp/tcping.tar.gz"
+  echo -e "${GREEN}[OK]${NC} tcping installed successfully"
+}
+
+# Install nexttrace
+install_nexttrace() {
+  echo -e "${YELLOW}[INFO]${NC} Installing nexttrace..."
+  curl -sL nxtrace.org/nt | bash
+  echo -e "${GREEN}[OK]${NC} nexttrace installed successfully"
+}
+
+# Install additional tools
+echo ""
+echo -e "${CYAN}Installing Additional Tools${NC}"
+echo -e "${YELLOW}-----------------------------------${NC}"
+
+install_tcping || echo -e "${RED}[WARN]${NC} Failed to install tcping, skipping..."
+install_nexttrace || echo -e "${RED}[WARN]${NC} Failed to install nexttrace, skipping..."
+
 # Generate configuration
 echo -e "${YELLOW}[INFO]${NC} Generating configuration..."
 cat > "$CONFIG_FILE" <<EOF

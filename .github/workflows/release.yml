@@ -97,7 +97,7 @@ jobs:
           mkdir -p pkg/yals_${VERSION}_linux_amd64
           cp bin/yals_server_linux_amd64 pkg/yals_${VERSION}_linux_amd64/yals_server
           cp bin/yals_agent_linux_amd64 pkg/yals_${VERSION}_linux_amd64/yals_agent
-          cp -r frontend/dist pkg/yals_${VERSION}_linux_amd64/web
+          cp -r web pkg/yals_${VERSION}_linux_amd64/web
           cp config.yaml pkg/yals_${VERSION}_linux_amd64/ || true
           cp agent.yaml pkg/yals_${VERSION}_linux_amd64/ || true
           cd pkg && zip -r ../dist/yals_${VERSION}_linux_amd64.zip yals_${VERSION}_linux_amd64 && cd ..
@@ -107,7 +107,7 @@ jobs:
           mkdir -p pkg/yals_${VERSION}_linux_arm64
           cp bin/yals_server_linux_arm64 pkg/yals_${VERSION}_linux_arm64/yals_server
           cp bin/yals_agent_linux_arm64 pkg/yals_${VERSION}_linux_arm64/yals_agent
-          cp -r frontend/dist pkg/yals_${VERSION}_linux_arm64/web
+          cp -r web pkg/yals_${VERSION}_linux_arm64/web
           cp config.yaml pkg/yals_${VERSION}_linux_arm64/ || true
           cp agent.yaml pkg/yals_${VERSION}_linux_arm64/ || true
           cd pkg && zip -r ../dist/yals_${VERSION}_linux_arm64.zip yals_${VERSION}_linux_arm64 && cd ..
@@ -117,7 +117,7 @@ jobs:
           mkdir -p pkg/yals_${VERSION}_windows_amd64
           cp bin/yals_server_windows_amd64.exe pkg/yals_${VERSION}_windows_amd64/yals_server.exe
           cp bin/yals_agent_windows_amd64.exe pkg/yals_${VERSION}_windows_amd64/yals_agent.exe
-          cp -r frontend/dist pkg/yals_${VERSION}_windows_amd64/web
+          cp -r web pkg/yals_${VERSION}_windows_amd64/web
           cp config.yaml pkg/yals_${VERSION}_windows_amd64/ || true
           cp agent.yaml pkg/yals_${VERSION}_windows_amd64/ || true
           cd pkg && zip -r ../dist/yals_${VERSION}_windows_amd64.zip yals_${VERSION}_windows_amd64 && cd ..
@@ -127,7 +127,7 @@ jobs:
           mkdir -p pkg/yals_${VERSION}_darwin_amd64
           cp bin/yals_server_darwin_amd64 pkg/yals_${VERSION}_darwin_amd64/yals_server
           cp bin/yals_agent_darwin_amd64 pkg/yals_${VERSION}_darwin_amd64/yals_agent
-          cp -r frontend/dist pkg/yals_${VERSION}_darwin_amd64/web
+          cp -r web pkg/yals_${VERSION}_darwin_amd64/web
           cp config.yaml pkg/yals_${VERSION}_darwin_amd64/ || true
           cp agent.yaml pkg/yals_${VERSION}_darwin_amd64/ || true
           cd pkg && zip -r ../dist/yals_${VERSION}_darwin_amd64.zip yals_${VERSION}_darwin_amd64 && cd ..
@@ -137,7 +137,7 @@ jobs:
           mkdir -p pkg/yals_${VERSION}_darwin_arm64
           cp bin/yals_server_darwin_arm64 pkg/yals_${VERSION}_darwin_arm64/yals_server
           cp bin/yals_agent_darwin_arm64 pkg/yals_${VERSION}_darwin_arm64/yals_agent
-          cp -r frontend/dist pkg/yals_${VERSION}_darwin_arm64/web
+          cp -r web pkg/yals_${VERSION}_darwin_arm64/web
           cp config.yaml pkg/yals_${VERSION}_darwin_arm64/ || true
           cp agent.yaml pkg/yals_${VERSION}_darwin_arm64/ || true
           cd pkg && zip -r ../dist/yals_${VERSION}_darwin_arm64.zip yals_${VERSION}_darwin_arm64 && cd ..
@@ -145,7 +145,7 @@ jobs:
           
           # Create web-only package
           mkdir -p pkg/yals_${VERSION}_web
-          cp -r frontend/dist/* pkg/yals_${VERSION}_web/
+          cp -r web/* pkg/yals_${VERSION}_web/
           cd pkg && zip -r ../dist/yals_${VERSION}_web.zip yals_${VERSION}_web && cd ..
           rm -rf pkg/yals_${VERSION}_web
           

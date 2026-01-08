@@ -10,7 +10,7 @@ export const config = {
   faviconPath: 'https://owo.network/favicon.ico',
   
   // Web top-left logo path, please put image files in public/images directory
-  logoPath: 'owo-logo.svg',
+  logoPath: '/images/owo-logo.svg',
   
   // Web background color
   backgroundColor: '#f5f5f5ff'

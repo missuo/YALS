@@ -139,17 +139,26 @@ func NewHandler(agentManager *agent.Manager, pingInterval, pongWait time.Duratio
 func (h *Handler) SetupRoutes(mux *http.ServeMux, webDir string) {
 	h.webDir = webDir
 
-	mux.HandleFunc("/", h.handleIndex)
+	// Register specific routes first (order doesn't matter in ServeMux, but keep organized)
 	mux.HandleFunc("/api/session", h.handleGetSession)
 	mux.HandleFunc("/ws/", h.handleWebSocket)
 	mux.HandleFunc("/ws/agent", h.handleAgentWebSocket)
 
 	fs := http.FileServer(http.Dir(webDir))
 	mux.Handle("/assets/", fs)
+
+	// Catch-all route last
+	mux.HandleFunc("/", h.handleIndex)
 }
 
 // handleIndex handles the index page
 func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
+	// Don't handle /api/ or /ws/ paths - they should be handled by their specific handlers
+	if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/ws/") {
+		http.NotFound(w, r)
+		return
+	}
+
 	switch r.URL.Path {
 	case "/":
 		indexPath := filepath.Join(h.webDir, "index.html")
@@ -162,7 +171,9 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if r.Header.Get("Accept") != "" && !strings.Contains(r.Header.Get("Accept"), "application/json") {
+		// For SPA routing: serve index.html for non-API requests that Accept HTML
+		accept := r.Header.Get("Accept")
+		if accept != "" && strings.Contains(accept, "text/html") {
 			indexPath := filepath.Join(h.webDir, "index.html")
 			http.ServeFile(w, r, indexPath)
 			return

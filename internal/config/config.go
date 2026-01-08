@@ -108,6 +108,7 @@ type CommandTemplate struct {
 	Description  string `yaml:"description"`
 	IgnoreTarget bool   `yaml:"ignore_target"` // Whether target parameter is ignored
 	MaximumQueue int    `yaml:"maxmium_queue"` // Maximum concurrent executions (0 = no limit)
+	DefaultPort  string `yaml:"default_port"`  // Default port to use when target doesn't include port (for commands like tcping)
 }
 
 // LoadAgentConfig loads agent configuration from the specified file
@@ -247,6 +248,7 @@ func (c *AgentConfig) GetAvailableCommands() []CommandInfo {
 				Description:  template.Description,
 				IgnoreTarget: template.IgnoreTarget,
 				MaximumQueue: template.MaximumQueue,
+				DefaultPort:  template.DefaultPort,
 			})
 		}
 	}
@@ -261,6 +263,7 @@ type CommandInfo struct {
 	Description  string `json:"description"`
 	IgnoreTarget bool   `json:"ignore_target"` // Whether target parameter is ignored
 	MaximumQueue int    `json:"maxmium_queue"` // Maximum concurrent executions (0 = no limit)
+	DefaultPort  string `json:"default_port"`  // Default port to use when target doesn't include port
 }
 
 // IsCommandAllowed checks if a command is allowed

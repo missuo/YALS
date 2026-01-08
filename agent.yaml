@@ -19,14 +19,30 @@ agent:
 
 # Command templates - flexible command definitions
 # Only these commands can be executed by this agent
+#
+# Template placeholders:
+#   {target} - The full target with port (e.g., "1.2.3.4:80" or just "1.2.3.4")
+#   {host}   - Just the host/IP part (no port)
+#   {port}   - Just the port part (if provided, or default_port if configured)
+#
+# If no placeholders are used, target is appended to the end of the template
 commands:
   ping:
     template: "ping -c 4"
     description: "Network connectivity test"
 
+  tcping:
+    template: "tcping -c 4 {host} {port}"
+    description: "TCP connectivity test"
+    default_port: "80"  # Used when user doesn't specify a port
+
   mtr:
     template: "mtr -rw -c 4"
     description: "Network route and packet loss analysis"
+
+  nexttrace:
+    template: "nexttrace --no-color"
+    description: "Advanced network route tracing"
   
   # Example: Command that doesn't need target and has execution limit
   # geekbench6:

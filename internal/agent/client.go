@@ -195,23 +195,28 @@ func (c *Client) prepareCommand(req CommandRequest) (string, *exec.Cmd, error) {
 		return "", nil, fmt.Errorf("command configuration not found: %s", req.CommandName)
 	}
 
-	// Resolve domain name if target is a domain
-	resolvedTarget := req.Target
-	if req.Target != "" && !cmdConfig.IgnoreTarget {
-		resolvedTarget = c.resolveTargetIfNeeded(req.Target, req.IPVersion)
-	}
-
-	// Get command template for traditional commands
+	// Get command template
 	template := cmdConfig.Template
 	if template == "" {
 		return "", nil, fmt.Errorf("command template not found: %s", req.CommandName)
 	}
 
-	// Build full command with target parameter (only if not ignored)
-	fullCommand := template
-	if resolvedTarget != "" && !cmdConfig.IgnoreTarget {
-		fullCommand = template + " " + resolvedTarget
+	// Parse target into host and port
+	host, port := parseHostPort(req.Target)
+
+	// Apply default port if not provided and default is configured
+	if port == "" && cmdConfig.DefaultPort != "" {
+		port = cmdConfig.DefaultPort
 	}
+
+	// Resolve domain name if target is a domain
+	resolvedHost := host
+	if host != "" && !cmdConfig.IgnoreTarget {
+		resolvedHost = c.resolveHostIfNeeded(host, req.IPVersion)
+	}
+
+	// Build full command using template placeholders or simple append
+	fullCommand := buildCommandFromTemplate(template, req.Target, resolvedHost, port, cmdConfig.IgnoreTarget)
 
 	// Create command based on complexity
 	cmd := c.createCommand(fullCommand)
@@ -222,21 +227,48 @@ func (c *Client) prepareCommand(req CommandRequest) (string, *exec.Cmd, error) {
 	return fullCommand, cmd, nil
 }
 
-// resolveTargetIfNeeded resolves domain name to IP if target is a domain
-func (c *Client) resolveTargetIfNeeded(target, ipVersion string) string {
-	// Extract host from target (may include port)
-	host := target
-	port := ""
-
-	// Handle host:port format
-	if strings.Contains(target, ":") {
-		parts := strings.Split(target, ":")
-		if len(parts) == 2 {
-			host = parts[0]
-			port = parts[1]
-		}
+// parseHostPort extracts host and port from target string
+// Supports: host, host:port, [ipv6], [ipv6]:port
+func parseHostPort(target string) (host, port string) {
+	target = strings.TrimSpace(target)
+	if target == "" {
+		return "", ""
 	}
 
+	// Handle IPv6 with brackets: [ipv6] or [ipv6]:port
+	if strings.HasPrefix(target, "[") {
+		closeBracket := strings.Index(target, "]")
+		if closeBracket == -1 {
+			return target, ""
+		}
+		host = target[1:closeBracket]
+		if len(target) > closeBracket+1 && target[closeBracket+1] == ':' {
+			port = target[closeBracket+2:]
+		}
+		return host, port
+	}
+
+	// Count colons to determine if it's IPv6 without brackets
+	colonCount := strings.Count(target, ":")
+	if colonCount > 1 {
+		// IPv6 address without port (e.g., 2001:db8::1)
+		return target, ""
+	}
+
+	// Handle host:port or IPv4:port
+	if colonCount == 1 {
+		lastColon := strings.LastIndex(target, ":")
+		host = target[:lastColon]
+		port = target[lastColon+1:]
+		return host, port
+	}
+
+	// No port
+	return target, ""
+}
+
+// resolveHostIfNeeded resolves domain name to IP if target is a domain
+func (c *Client) resolveHostIfNeeded(host, ipVersion string) string {
 	// Check if host is a domain name
 	inputType := validator.ValidateInput(host)
 	if inputType == validator.Domain {
@@ -254,33 +286,69 @@ func (c *Client) resolveTargetIfNeeded(target, ipVersion string) string {
 		// Resolve domain to IP with version preference
 		ips, err := validator.ResolveDomainWithVersion(host, dnsIPVersion)
 		if err != nil {
-			logger.Warnf("Failed to resolve domain %s with IP version %s: %v, using original target", host, ipVersion, err)
-			return target
+			logger.Warnf("Failed to resolve domain %s with IP version %s: %v, using original host", host, ipVersion, err)
+			return host
 		}
 
 		if len(ips) > 0 {
-			resolvedIP := ips[0].String()
-
-			// Check if it's IPv6 and format accordingly
-			parsedIP := ips[0]
-			isIPv6 := parsedIP.To4() == nil
-
-			// Reconstruct target with resolved IP
-			if port != "" {
-				if isIPv6 {
-					// IPv6 with port needs brackets: [ipv6]:port
-					return "[" + resolvedIP + "]:" + port
-				}
-				// IPv4 with port: ipv4:port
-				return resolvedIP + ":" + port
-			}
-
-			// No port specified - return IP as-is (no brackets)
-			return resolvedIP
+			return ips[0].String()
 		}
 	}
 
-	return target
+	return host
+}
+
+// buildCommandFromTemplate builds the full command from template with placeholders
+// Supports: {target}, {host}, {port}
+// If no placeholders are found, appends target to the end (legacy behavior)
+func buildCommandFromTemplate(template, originalTarget, resolvedHost, port string, ignoreTarget bool) string {
+	// Check if template contains any placeholders
+	hasPlaceholders := strings.Contains(template, "{target}") ||
+		strings.Contains(template, "{host}") ||
+		strings.Contains(template, "{port}")
+
+	if hasPlaceholders {
+		// Replace placeholders with actual values
+		result := template
+
+		// {target} = the full resolved target (host:port if port exists, or just host)
+		resolvedTarget := resolvedHost
+		if port != "" {
+			// Check if resolved host is IPv6 and needs brackets
+			if strings.Contains(resolvedHost, ":") {
+				resolvedTarget = "[" + resolvedHost + "]:" + port
+			} else {
+				resolvedTarget = resolvedHost + ":" + port
+			}
+		}
+		result = strings.ReplaceAll(result, "{target}", resolvedTarget)
+
+		// {host} = just the host part (resolved IP or domain)
+		result = strings.ReplaceAll(result, "{host}", resolvedHost)
+
+		// {port} = just the port part
+		result = strings.ReplaceAll(result, "{port}", port)
+
+		return result
+	}
+
+	// Legacy behavior: append target to the end of template
+	if ignoreTarget || resolvedHost == "" {
+		return template
+	}
+
+	// Rebuild target with resolved host
+	resolvedTarget := resolvedHost
+	if port != "" {
+		// Check if resolved host is IPv6 and needs brackets
+		if strings.Contains(resolvedHost, ":") {
+			resolvedTarget = "[" + resolvedHost + "]:" + port
+		} else {
+			resolvedTarget = resolvedHost + ":" + port
+		}
+	}
+
+	return template + " " + resolvedTarget
 }
 
 // createCommand creates an exec.Cmd based on command complexity

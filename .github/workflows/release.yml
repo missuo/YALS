@@ -1,0 +1,161 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: '1.24'
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    name: Build Release Assets
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get release version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      # Build Server binaries
+      - name: Build Server for Linux amd64
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/yals_server_linux_amd64 ./cmd/server/main.go
+
+      - name: Build Server for Linux arm64
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/yals_server_linux_arm64 ./cmd/server/main.go
+
+      - name: Build Server for Windows amd64
+        run: |
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o bin/yals_server_windows_amd64.exe ./cmd/server/main.go
+
+      - name: Build Server for macOS amd64
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o bin/yals_server_darwin_amd64 ./cmd/server/main.go
+
+      - name: Build Server for macOS arm64
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o bin/yals_server_darwin_arm64 ./cmd/server/main.go
+
+      # Build Agent binaries
+      - name: Build Agent for Linux amd64
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/yals_agent_linux_amd64 ./cmd/agent/main.go
+
+      - name: Build Agent for Linux arm64
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/yals_agent_linux_arm64 ./cmd/agent/main.go
+
+      - name: Build Agent for Windows amd64
+        run: |
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o bin/yals_agent_windows_amd64.exe ./cmd/agent/main.go
+
+      - name: Build Agent for macOS amd64
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o bin/yals_agent_darwin_amd64 ./cmd/agent/main.go
+
+      - name: Build Agent for macOS arm64
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o bin/yals_agent_darwin_arm64 ./cmd/agent/main.go
+
+      # Build Web Frontend
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      # Package everything into zip files
+      - name: Create release packages
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          
+          # Create dist directory
+          mkdir -p dist
+          
+          # Package Linux amd64
+          mkdir -p pkg/yals_${VERSION}_linux_amd64
+          cp bin/yals_server_linux_amd64 pkg/yals_${VERSION}_linux_amd64/yals_server
+          cp bin/yals_agent_linux_amd64 pkg/yals_${VERSION}_linux_amd64/yals_agent
+          cp -r frontend/dist pkg/yals_${VERSION}_linux_amd64/web
+          cp config.yaml pkg/yals_${VERSION}_linux_amd64/ || true
+          cp agent.yaml pkg/yals_${VERSION}_linux_amd64/ || true
+          cd pkg && zip -r ../dist/yals_${VERSION}_linux_amd64.zip yals_${VERSION}_linux_amd64 && cd ..
+          rm -rf pkg/yals_${VERSION}_linux_amd64
+          
+          # Package Linux arm64
+          mkdir -p pkg/yals_${VERSION}_linux_arm64
+          cp bin/yals_server_linux_arm64 pkg/yals_${VERSION}_linux_arm64/yals_server
+          cp bin/yals_agent_linux_arm64 pkg/yals_${VERSION}_linux_arm64/yals_agent
+          cp -r frontend/dist pkg/yals_${VERSION}_linux_arm64/web
+          cp config.yaml pkg/yals_${VERSION}_linux_arm64/ || true
+          cp agent.yaml pkg/yals_${VERSION}_linux_arm64/ || true
+          cd pkg && zip -r ../dist/yals_${VERSION}_linux_arm64.zip yals_${VERSION}_linux_arm64 && cd ..
+          rm -rf pkg/yals_${VERSION}_linux_arm64
+          
+          # Package Windows amd64
+          mkdir -p pkg/yals_${VERSION}_windows_amd64
+          cp bin/yals_server_windows_amd64.exe pkg/yals_${VERSION}_windows_amd64/yals_server.exe
+          cp bin/yals_agent_windows_amd64.exe pkg/yals_${VERSION}_windows_amd64/yals_agent.exe
+          cp -r frontend/dist pkg/yals_${VERSION}_windows_amd64/web
+          cp config.yaml pkg/yals_${VERSION}_windows_amd64/ || true
+          cp agent.yaml pkg/yals_${VERSION}_windows_amd64/ || true
+          cd pkg && zip -r ../dist/yals_${VERSION}_windows_amd64.zip yals_${VERSION}_windows_amd64 && cd ..
+          rm -rf pkg/yals_${VERSION}_windows_amd64
+          
+          # Package macOS amd64
+          mkdir -p pkg/yals_${VERSION}_darwin_amd64
+          cp bin/yals_server_darwin_amd64 pkg/yals_${VERSION}_darwin_amd64/yals_server
+          cp bin/yals_agent_darwin_amd64 pkg/yals_${VERSION}_darwin_amd64/yals_agent
+          cp -r frontend/dist pkg/yals_${VERSION}_darwin_amd64/web
+          cp config.yaml pkg/yals_${VERSION}_darwin_amd64/ || true
+          cp agent.yaml pkg/yals_${VERSION}_darwin_amd64/ || true
+          cd pkg && zip -r ../dist/yals_${VERSION}_darwin_amd64.zip yals_${VERSION}_darwin_amd64 && cd ..
+          rm -rf pkg/yals_${VERSION}_darwin_amd64
+          
+          # Package macOS arm64
+          mkdir -p pkg/yals_${VERSION}_darwin_arm64
+          cp bin/yals_server_darwin_arm64 pkg/yals_${VERSION}_darwin_arm64/yals_server
+          cp bin/yals_agent_darwin_arm64 pkg/yals_${VERSION}_darwin_arm64/yals_agent
+          cp -r frontend/dist pkg/yals_${VERSION}_darwin_arm64/web
+          cp config.yaml pkg/yals_${VERSION}_darwin_arm64/ || true
+          cp agent.yaml pkg/yals_${VERSION}_darwin_arm64/ || true
+          cd pkg && zip -r ../dist/yals_${VERSION}_darwin_arm64.zip yals_${VERSION}_darwin_arm64 && cd ..
+          rm -rf pkg/yals_${VERSION}_darwin_arm64
+          
+          # Create web-only package
+          mkdir -p pkg/yals_${VERSION}_web
+          cp -r frontend/dist/* pkg/yals_${VERSION}_web/
+          cd pkg && zip -r ../dist/yals_${VERSION}_web.zip yals_${VERSION}_web && cd ..
+          rm -rf pkg/yals_${VERSION}_web
+          
+          # List created packages
+          ls -la dist/
+
+      # Upload release assets
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
